@@ -1,2 +1,2 @@
 # discord-downloader-bot
-a simple discord bot that downloads videos from links sent in a channel using yt-dlp 
+a simple [serenity](https://github.com/serenity-rs/serenity) discord bot that downloads videos from links sent in a channel using [yt-dlp](https://github.com/yt-dlp/yt-dlp) 
