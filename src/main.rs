@@ -26,14 +26,16 @@ struct Handler {
 
 impl Handler {
     async fn dl_attachments(&self, msg: &Message) -> Result<Option<()>, Box<dyn std::error::Error>> {
+        let mut return_thing = None;
         for attachment in msg.attachments.iter() {
             println!("attachment found");
             let mut file = File::create(format!("{}/{}", self.down_dir, attachment.filename))?;
             file.write(attachment.download().await?.as_slice())?;
             file.flush()?;
+            return_thing = Some(());
         }
 
-        Ok(None)
+        Ok(return_thing)
     }
 }
 
