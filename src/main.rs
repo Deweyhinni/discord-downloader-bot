@@ -21,6 +21,7 @@ async fn download_video(url: String, save_path: &str, yt_dlp_path: PathBuf) -> R
 struct Handler {
     channel: u64,
     down_dir: &'static str,
+    yt_dlp_path: PathBuf,
 }
 
 #[async_trait]
@@ -31,7 +32,7 @@ impl EventHandler for Handler {
             let response: String;
             let _issue_list = match Url::parse(msg.content.as_str()) {
                 Ok(_) => {
-                    if let Err(e) = download_video(msg.content, self.down_dir, download_yt_dlp(".").await.unwrap()).await {
+                    if let Err(e) = download_video(msg.content, self.down_dir, self.yt_dlp_path.clone()).await {
                         println!("error downloading video {:?}", e);
                         response = format!("error downloading video {:?}", e).to_string();
                     } else {
@@ -63,7 +64,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         | GatewayIntents::MESSAGE_CONTENT;
 
     let mut client =
-        Client::builder(&token, intents).event_handler(Handler {channel: channel_id, down_dir: "./downloads"}).await.expect("error creating client");
+        Client::builder(&token, intents).event_handler(Handler {
+            channel: channel_id,
+            down_dir: "./downloads",
+            yt_dlp_path: download_yt_dlp(".").await.expect("unable to download yt-dlp")
+        }).await.expect("error creating client");
     
     if let Err(e) = client.start().await {
         println!("client error: {e:?}");
