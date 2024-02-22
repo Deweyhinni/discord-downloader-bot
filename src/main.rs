@@ -1,4 +1,4 @@
-use std::{env, error::Error, path::PathBuf, str::FromStr};
+use std::{env, error::Error, path::PathBuf, str::FromStr, fs::File, io::Write};
 
 use serenity::async_trait;
 use serenity::model::channel::Message;
@@ -24,24 +24,49 @@ struct Handler {
     yt_dlp_path: PathBuf,
 }
 
+impl Handler {
+    async fn dl_attachments(&self, msg: &Message) -> Result<Option<()>, Box<dyn std::error::Error>> {
+        for attachment in msg.attachments.iter() {
+            println!("attachment found");
+            let mut file = File::create(format!("{}/{}", self.down_dir, attachment.filename))?;
+            file.write(attachment.download().await?.as_slice())?;
+            file.flush()?;
+        }
+
+        Ok(None)
+    }
+}
+
 #[async_trait]
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
         println!("message stuff");
         if msg.channel_id == serenity::all::ChannelId::new(self.channel) && !msg.author.bot {
-            let response: String;
-            let _issue_list = match Url::parse(msg.content.as_str()) {
-                Ok(_) => {
-                    if let Err(e) = download_video(msg.content, self.down_dir, self.yt_dlp_path.clone()).await {
-                        println!("error downloading video {:?}", e);
-                        response = format!("error downloading video {:?}", e).to_string();
-                    } else {
-                        println!("succesfully downloaded video");
-                        response = "succesfully downloaded video".to_string();
+            let mut response: String = "nothing to do".to_string();
+            if msg.content.len() > 0 {
+                let _issue_list = match Url::parse(msg.content.as_str()) {
+                    Ok(url) => {
+                        if let Err(e) = download_video(url.to_string(), self.down_dir, self.yt_dlp_path.clone()).await {
+                            println!("error downloading video {:?}", e);
+                            response = format!("error downloading video {:?}", e).to_string();
+                        } else {
+                            println!("{}",url.to_string());
+                            println!("succesfully downloaded video");
+                            response = "succesfully downloaded video".to_string();
+                        }
+                    },
+                    Err(parse_err) => {
+                        response = format!("error with url: {:?}", parse_err);
                     }
-                },
-                Err(parse_err) => {
-                    response = format!("error with url: {:?}", parse_err);
+                };
+            }
+            match self.dl_attachments(&msg).await {
+                Ok(Some(())) => {
+                    response = "succesfully downloaded attachment".to_string();
+                }
+                Ok(None) => (),
+                Err(error) => {
+                    response = format!("failed to download attachments: {error}");
                 }
             };
             if let Err(why) = msg.channel_id.say(&ctx.http, response).await {
