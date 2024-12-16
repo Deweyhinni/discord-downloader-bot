@@ -1,0 +1,10 @@
+services:
+  downloader_bot:
+    image: downloader_bot
+    user: 1000:1000
+    volumes:
+      - type: bind
+        source: /punkrecords/media/downloads
+        target: /downloads
+    restart: unless-stopped
+    env_file: "bot.env"

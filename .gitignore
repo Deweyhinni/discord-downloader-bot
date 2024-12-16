@@ -2,3 +2,4 @@
 /downloads
 yt-dlp
 run.sh
+*.env

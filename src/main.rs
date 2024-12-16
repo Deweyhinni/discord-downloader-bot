@@ -1,4 +1,4 @@
-use std::{env, error::Error, path::PathBuf, str::FromStr, fs::File, io::Write};
+use std::{env, error::Error, fs::File, io::Write, path::PathBuf, str::FromStr};
 
 use serenity::async_trait;
 use serenity::model::channel::Message;
@@ -9,7 +9,11 @@ use youtube_dl::{download_yt_dlp, YoutubeDl};
 
 use url::Url;
 
-async fn download_video(url: String, save_path: &str, yt_dlp_path: PathBuf) -> Result<(), youtube_dl::Error> {
+async fn download_video(
+    url: String,
+    save_path: &str,
+    yt_dlp_path: PathBuf,
+) -> Result<(), youtube_dl::Error> {
     let output = YoutubeDl::new(url)
         .youtube_dl_path(yt_dlp_path)
         .download_to_async(save_path)
@@ -25,7 +29,10 @@ struct Handler {
 }
 
 impl Handler {
-    async fn dl_attachments(&self, msg: &Message) -> Result<Option<()>, Box<dyn std::error::Error>> {
+    async fn dl_attachments(
+        &self,
+        msg: &Message,
+    ) -> Result<Option<()>, Box<dyn std::error::Error>> {
         let mut return_thing = None;
         for attachment in msg.attachments.iter() {
             println!("attachment found");
@@ -48,15 +55,18 @@ impl EventHandler for Handler {
             if msg.content.len() > 0 {
                 let _issue_list = match Url::parse(msg.content.as_str()) {
                     Ok(url) => {
-                        if let Err(e) = download_video(url.to_string(), self.down_dir, self.yt_dlp_path.clone()).await {
+                        if let Err(e) =
+                            download_video(url.to_string(), self.down_dir, self.yt_dlp_path.clone())
+                                .await
+                        {
                             println!("error downloading video {:?}", e);
                             response = format!("error downloading video {:?}", e).to_string();
                         } else {
-                            println!("{}",url.to_string());
+                            println!("{}", url.to_string());
                             println!("succesfully downloaded video");
                             response = "succesfully downloaded video".to_string();
                         }
-                    },
+                    }
                     Err(parse_err) => {
                         response = format!("error with url: {:?}", parse_err);
                     }
@@ -85,18 +95,25 @@ impl EventHandler for Handler {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let token = env::var("DISCORD_TOKEN").expect("token not found in env");
-    let channel_id: u64 = env::var("BOT_CHANNEL_ID").expect("channel id not found in env").parse().expect("channel id variable not valid");
+    let channel_id: u64 = env::var("BOT_CHANNEL_ID")
+        .expect("channel id not found in env")
+        .parse()
+        .expect("channel id variable not valid");
     let intents = GatewayIntents::GUILD_MESSAGES
         | GatewayIntents::DIRECT_MESSAGES
         | GatewayIntents::MESSAGE_CONTENT;
 
-    let mut client =
-        Client::builder(&token, intents).event_handler(Handler {
+    let mut client = Client::builder(&token, intents)
+        .event_handler(Handler {
             channel: channel_id,
             down_dir: "./downloads",
-            yt_dlp_path: download_yt_dlp(".").await.expect("unable to download yt-dlp")
-        }).await.expect("error creating client");
-    
+            yt_dlp_path: download_yt_dlp(".")
+                .await
+                .expect("unable to download yt-dlp"),
+        })
+        .await
+        .expect("error creating client");
+
     if let Err(e) = client.start().await {
         println!("client error: {e:?}");
     }
